@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://torchlens.local/sitemap-index.xml

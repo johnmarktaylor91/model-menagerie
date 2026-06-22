@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img">
+  <title>TorchLens Model Menagerie</title>
+  <rect width="1200" height="630" fill="#0d1117"/>
+  <rect x="80" y="80" width="1040" height="470" rx="16" fill="#161b22" stroke="#30363d"/>
+  <text x="120" y="170" fill="#58a6ff" font-family="monospace" font-size="28">TorchLens Model Menagerie</text>
+  <text x="120" y="235" fill="#e6edf3" font-family="Inter, sans-serif" font-size="58" font-weight="600">Architecture diagrams at scale</text>
+  <g fill="#161b22" stroke="#58a6ff">
+    <rect x="130" y="340" width="140" height="54" rx="8"/>
+    <rect x="360" y="340" width="140" height="54" rx="8"/>
+    <rect x="590" y="340" width="140" height="54" rx="8"/>
+    <rect x="820" y="340" width="140" height="54" rx="8"/>
+  </g>
+  <g stroke="#58a6ff" stroke-width="4">
+    <path d="M270 367 H360"/>
+    <path d="M500 367 H590"/>
+    <path d="M730 367 H820"/>
+  </g>
+</svg>
