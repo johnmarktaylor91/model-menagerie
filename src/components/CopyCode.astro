@@ -1,0 +1,23 @@
+---
+interface Props {
+  code: string;
+}
+
+const { code } = Astro.props;
+---
+
+<div class="panel flex flex-wrap items-center gap-3 p-3">
+  <code class="mono min-w-0 flex-1 overflow-x-auto text-sm">{code}</code>
+  <button class="button copy-button" type="button" data-copy={code}>Copy</button>
+</div>
+<script>
+  document.querySelectorAll<HTMLButtonElement>(".copy-button").forEach((button) => {
+    button.addEventListener("click", async () => {
+      await navigator.clipboard.writeText(button.dataset.copy ?? "");
+      button.textContent = "Copied";
+      window.setTimeout(() => {
+        button.textContent = "Copy";
+      }, 1200);
+    });
+  });
+</script>
