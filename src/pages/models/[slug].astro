@@ -1,0 +1,119 @@
+---
+import CopyCode from "@/components/CopyCode.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { formatCount, getAdjacentModels, getModelBySlug, listModelSlugs, readSvgAsset } from "@/lib/catalog";
+
+export function getStaticPaths() {
+  return listModelSlugs().map((slug) => ({ params: { slug } }));
+}
+
+const model = getModelBySlug(Astro.params.slug ?? "");
+const svgMarkup = model.monster_graph ? "" : readSvgAsset(model);
+const { prev, next } = getAdjacentModels(model.slug);
+const meta = [
+  ["Stable ID", model.stable_id],
+  ["Family", model.family_normalized],
+  ["Domain", model.domain],
+  ["Zoo", model.zoo],
+  ["Year", model.year ?? "unknown"],
+  ["Year confidence", model.year_confidence],
+  ["Forward validation", model.forward_validated ? `${model.input_tier} input` : "not validated"],
+  ["Quarantine", model.quarantine ? "yes" : "no"],
+  ["Ops", model.n_ops ?? "unknown"],
+  ["Parameters", formatCount(model.param_count)],
+  ["Recurrent", model.is_recurrent === null ? "unknown" : model.is_recurrent ? "yes" : "no"],
+  ["Graph hash", model.graph_shape_hash],
+  ["Input shape", model.input_shape_label],
+  ["Input dtype", model.input_dtype_label],
+  ["License", model.source_license],
+];
+---
+
+<BaseLayout title={model.display_name} description={`${model.display_name} synthetic TorchLens architecture page.`} ogImage={model.assets.thumb.url}>
+  <section class="shell py-8">
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <a href="/models" class="text-sm" style="color: var(--secondary);">Back to models</a>
+        <h1 class="mt-2 text-4xl font-semibold">{model.display_name}</h1>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <span class="chip">{model.family_normalized}</span>
+        <span class="chip">{model.domain}</span>
+        <span class="chip">{model.forward_validated ? `validated: ${model.input_tier}` : "not forward validated"}</span>
+      </div>
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <section class="panel overflow-hidden">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b p-3" style="border-color: var(--border);">
+          <h2 class="text-sm font-semibold">Architecture diagram</h2>
+          <div class="flex flex-wrap gap-2">
+            <button class="button" type="button" data-panzoom="zoom-in">+</button>
+            <button class="button" type="button" data-panzoom="zoom-out">-</button>
+            <button class="button" type="button" data-panzoom="reset">Fit</button>
+            <a class="button" href={model.assets.svg.url}>Open SVG</a>
+          </div>
+        </div>
+        {model.monster_graph ? (
+          <div class="diagram-bg grid min-h-[520px] place-items-center p-6 text-center">
+            <div class="space-y-4">
+              <img src={model.assets.thumb.url} alt={`${model.display_name} monster graph thumbnail`} class="mx-auto max-h-80 rounded border object-contain" style="border-color: var(--border);" />
+              <p style="color: var(--secondary);">Monster graph detected. Inline rendering is skipped for page weight; open the full SVG when needed.</p>
+              <a class="button primary" href={model.assets.svg.url}>Open full SVG</a>
+            </div>
+          </div>
+        ) : (
+          <div id="diagram-stage" class="diagram-bg h-[70vh] min-h-[520px] overflow-hidden p-4" tabindex="0" aria-label={`${model.display_name} pan and zoom diagram`}>
+            <div id="diagram-panzoom" class="inline-block origin-top-left" set:html={svgMarkup} />
+          </div>
+        )}
+      </section>
+
+      <aside class="space-y-4">
+        <section class="panel p-4">
+          <h2 class="mb-3 text-lg font-semibold">Metadata</h2>
+          <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+            {meta.map(([label, value]) => (
+              <>
+                <dt style="color: var(--secondary);">{label}</dt>
+                <dd class="min-w-0 overflow-hidden text-ellipsis">{value}</dd>
+              </>
+            ))}
+          </dl>
+        </section>
+        <section class="space-y-3">
+          <CopyCode code={model.recipe_text} />
+          <div class="panel flex flex-wrap gap-2 p-3">
+            <a class="button primary" href={model.assets.svg.url}>SVG</a>
+            <a class="button" href={model.assets.pdf?.url ?? "#"} aria-disabled={model.assets.pdf ? "false" : "true"}>PDF soon</a>
+            <a class="button" href={model.assets.tlspec.url}>tlspec</a>
+            <a class="button" href={`/fixture/export/v1/models/${model.slug}.json`}>metadata JSON</a>
+          </div>
+          <div class="panel space-y-2 p-3 text-sm" style="color: var(--secondary);">
+            <p>Made with TorchLens v{model.torchlens_version}; renderer {model.renderer_version}.</p>
+            <p><a href={model.source_url}>Source</a>{model.paper_url ? <> · <a href={model.paper_url}>Paper</a></> : null}</p>
+          </div>
+        </section>
+        <nav class="grid grid-cols-2 gap-3">
+          <a class="button" href={prev ? `/models/${prev.slug}` : "#"} aria-disabled={prev ? "false" : "true"}>Previous</a>
+          <a class="button" href={next ? `/models/${next.slug}` : "#"} aria-disabled={next ? "false" : "true"}>Next</a>
+        </nav>
+      </aside>
+    </div>
+  </section>
+  {!model.monster_graph && (
+    <script>
+      import Panzoom from "@panzoom/panzoom";
+
+      const elem = document.getElementById("diagram-panzoom");
+      const stage = document.getElementById("diagram-stage");
+      if (elem && stage) {
+        const panzoom = Panzoom(elem, { maxScale: 8, minScale: 0.2, contain: "outside" });
+        stage.addEventListener("wheel", panzoom.zoomWithWheel);
+        document.querySelector('[data-panzoom="zoom-in"]')?.addEventListener("click", () => panzoom.zoomIn());
+        document.querySelector('[data-panzoom="zoom-out"]')?.addEventListener("click", () => panzoom.zoomOut());
+        document.querySelector('[data-panzoom="reset"]')?.addEventListener("click", () => panzoom.reset());
+      }
+    </script>
+  )}
+</BaseLayout>
