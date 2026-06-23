@@ -1,0 +1,10 @@
+{
+  "build_verified": 14291,
+  "cataloged": 100732,
+  "deferred": 86441,
+  "forward_validated_real": 0,
+  "forward_validated_wrapper": 0,
+  "predicate_note": "preview: render coverage only, validation pending",
+  "quarantined": 0,
+  "rendered": 14291
+}

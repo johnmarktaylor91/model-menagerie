@@ -1,0 +1,14 @@
+{
+  "counts": {
+    "cataloged": 100732,
+    "models": 14291,
+    "monster_graphs": 242,
+    "rendered_available": 14291,
+    "thumbnail_placeholders": 598,
+    "thumbnails_generated": 13693
+  },
+  "export_version": "phase0-preview",
+  "renderer_version": "unknown",
+  "schema_version": "phase0-target-schema",
+  "torchlens_version": "unknown"
+}
