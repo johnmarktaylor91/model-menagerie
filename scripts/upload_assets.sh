@@ -49,7 +49,7 @@ fi
 if rclone listremotes | grep -qx "r2:"; then
   destination="r2:"
 elif [[ -n "${R2_ACCOUNT_ID:-}" && -n "${R2_ACCESS_KEY_ID:-}" && -n "${R2_SECRET_ACCESS_KEY:-}" && -n "${R2_BUCKET:-}" ]]; then
-  destination=":s3:${R2_BUCKET}"
+  destination="s3:${R2_BUCKET}"
   export RCLONE_CONFIG_S3_TYPE="s3"
   export RCLONE_CONFIG_S3_PROVIDER="Cloudflare"
   export RCLONE_CONFIG_S3_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID"
