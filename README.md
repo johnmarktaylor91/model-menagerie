@@ -1,48 +1,83 @@
-# TorchLens Model Menagerie Scaffold
+# TorchLens Model Menagerie Web
 
-Local, synthetic-data scaffold for a future TorchLens Model Menagerie website. It proves the Astro static architecture, dark observatory design, searchable gallery, model detail pages, dataset landing page, and 10k-page build path without touching real menagerie data.
+Astro static site for the public Model Menagerie gallery. Phase 0 points the existing scaffold at the real rendered diagram catalog while preserving the target Tier-B schema.
 
 ## Run
 
+Generate the local preview export first:
+
 ```bash
-python scripts/gen_fixture.py
+python scripts/build_catalog.py \
+  --gallery /home/jtaylor/menagerie_gallery \
+  --manifest /home/jtaylor/menagerie_gallery/manifest.tsv \
+  --out ./export \
+  --limit 600
 npm install
 npm run dev
 ```
 
-Build the static site:
+Build the static site and Pagefind index:
 
 ```bash
 npm run build
+npx astro check
 ```
 
-The build copies `fixture/export/v1` into `public/fixture` so local asset URLs like `/fixture/export/v1/assets/svg/...` resolve in dev and `dist`.
+`npm run build` mirrors `export/` into `public/export/` before Astro builds, so asset URLs such as `/export/assets/<sha256>.svg` resolve in dev and in `dist`.
+
+## Regenerating the Catalog
+
+`scripts/build_catalog.py` is the re-runnable Phase 0 export builder:
+
+```bash
+python scripts/build_catalog.py --gallery /home/jtaylor/menagerie_gallery --manifest /home/jtaylor/menagerie_gallery/manifest.tsv --out ./export --limit 600
+```
+
+It reads rendered manifest rows, verifies each SVG exists, copies SVGs into content-addressed assets, generates WebP thumbnails, and emits:
+
+- `models/<slug>.json`
+- `models.jsonl`
+- `funnel.json`
+- `export_manifest.json`
+- `facets.json`
+- `catalog.csv`
+- `assets/<sha256>.svg` and `assets/<sha256>.webp`
+
+Use `--limit 600` for a fast local preview. To scale to the full rendered gallery, omit `--limit` or set a higher value:
+
+```bash
+python scripts/build_catalog.py --gallery /home/jtaylor/menagerie_gallery --manifest /home/jtaylor/menagerie_gallery/manifest.tsv --out ./export --jobs 8
+```
+
+Full-scale thumbnail generation is intentionally a separate operator-triggered step.
 
 ## Data Seam
 
-`fixture/export/v1` is the replaceable export directory. The scaffold reads it only through `src/lib/catalog.ts`; components and pages consume typed model objects and do not hardcode model data.
+All catalog access goes through `src/lib/catalog.ts`. Pages and components consume typed records from:
 
-The fixture includes:
+- `getAllModels`
+- `getModelBySlug`
+- `listModelSlugs`
+- `getFunnel`
+- `getCatalogIndex`
+- `getFeaturedModels`
 
-- `models.jsonl` and `catalog.csv`
-- per-model JSON files in `models/` for lazy model-page loading
-- `funnel.json`, `assets_index.json`, `retired_ids.json`, and `export_manifest.json`
-- SVG diagrams, PNG thumbnails, and tlspec JSON assets
+Swapping Phase 0 manifest scraping for a future pipeline export should require editing only `src/lib/catalog.ts` if the storage location changes. The model schema already includes the Tier-B fields, with honest placeholders such as `forward_validated: false`, `source_license: "unknown"`, `param_count: null`, `tlspec: null`, and exactly one current variant.
 
-To swap in the real export later, replace `fixture/export/v1` with the real SEAM export and update `src/lib/catalog.ts` only if the real contract differs.
+## Content-Addressed Assets
 
-## Benchmark
+Every emitted SVG and WebP thumbnail has an `AssetRef`:
 
-Run:
-
-```bash
-scripts/benchmark_10k.sh
+```ts
+interface AssetRef {
+  url: string;
+  sha256: string;
+  bytes: number;
+}
 ```
 
-The script generates the 10k fixture, runs `npm run build` including Pagefind, and prints wall-clock time, peak memory when `/usr/bin/time -v` is available, output file count, and `dist` size. Results from the latest local run are recorded in `BENCHMARK.md`.
-
-Cloudflare Pages Free caps a deployment at 20,000 files and 20-minute builds. Cloudflare Pages Pro has a 100k-file limit when `PAGES_WRANGLER_MAJOR_VERSION=4` is set. The benchmark sets `TORCHLENS_SKIP_PUBLIC_FIXTURE=1` so it measures metadata pages plus Pagefind with assets treated as external URLs. The normal 60-model local build mirrors fixture assets for local verification.
+Asset URLs are keyed by digest as `/export/assets/<sha256>.<ext>`. The path, sha256, and byte count are stored together in each model record, so the loaded path is also the integrity identity. Tier-B should reuse this layout rather than reorganizing assets.
 
 ## Scope
 
-All catalog content is synthetic. The scaffold does not read the TorchLens repository, does not include real menagerie data, and has no configured remote.
+This repo is the separate web project. It does not modify the TorchLens package repo or the read-only `/home/jtaylor/menagerie_gallery` source gallery.
