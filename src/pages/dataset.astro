@@ -6,29 +6,40 @@ import { getFunnel, getManifest } from "@/lib/catalog";
 const funnel = getFunnel();
 const manifest = getManifest();
 const fields = [
-  ["stable_id", "Stable identifier retained across exports"],
-  ["slug", "URL-safe model identifier"],
-  ["display_name", "Human-facing model name"],
-  ["family_normalized", "Normalized model family"],
-  ["domain", "Primary model domain"],
-  ["input_tier", "real, wrapper, or none"],
-  ["assets", "Local fixture asset references and checksums"],
+  ["stable_id", "Provisional manifest model_id; Tier-B freezes the stable identifier."],
+  ["slug", "URL-safe model identifier, de-duplicated deterministically."],
+  ["display_name", "Manifest model name."],
+  ["category", "Rendered gallery subdirectory."],
+  ["family_normalized", "Conservative best-effort family label."],
+  ["variants", "Rendered diagram variants; Phase 0 has one unrolled-none variant."],
+  ["variants[].svg / variants[].thumb", "Content-addressed asset references with url, sha256, and byte count."],
+  ["tlspec", "Future per-model TorchLens spec download slot; null in this preview."],
+  ["forward_validated", "False in this preview; no verified correctness claim yet."],
+  ["source_license", "Unknown in this preview until source provenance lands."],
 ];
 ---
 
-<BaseLayout title="Dataset" description="Synthetic TorchLens fixture dataset download page.">
+<BaseLayout title="Dataset" description="Rendered Model Menagerie preview export download page.">
   <section class="shell space-y-8 py-10">
     <div>
-      <p class="mono text-sm" style="color: var(--accent);">Serious dataset stub</p>
-      <h1 class="mt-2 text-4xl font-semibold">Synthetic export v{manifest.export_version}</h1>
-      <p class="mt-3 max-w-3xl leading-7" style="color: var(--secondary);">This page exercises the eventual dataset landing page against generated fixture data. Real catalog data swaps in by replacing fixture/export/v1.</p>
+      <p class="mono text-sm" style="color: var(--accent);">Preview export</p>
+      <h1 class="mt-2 text-4xl font-semibold">Rendered catalog v{manifest.export_version}</h1>
+      <p class="mt-3 max-w-3xl leading-7" style="color: var(--secondary);">
+        This export indexes real rendered architecture diagrams only. Forward validation, provenance, licensing, tlspec files, and richer model metadata are pending for the full atlas.
+      </p>
     </div>
     <FunnelStrip funnel={funnel} />
     <div class="flex flex-wrap gap-3">
-      <a class="button primary" href="/fixture/export/v1/catalog.csv">Download CSV</a>
-      <a class="button primary" href="/fixture/export/v1/models.jsonl">Download JSONL</a>
-      <a class="button" href="/fixture/export/v1/export_manifest.json">Manifest</a>
+      <a class="button primary" href="/export/catalog.csv">Download CSV</a>
+      <a class="button primary" href="/export/models.jsonl">Download JSONL</a>
+      <a class="button" href="/export/export_manifest.json">Manifest</a>
     </div>
+    <section class="panel p-4">
+      <h2 class="mb-2 text-xl font-semibold">Preview honesty note</h2>
+      <p class="leading-7" style="color: var(--secondary);">
+        The Phase 0 catalog means an SVG exists and was copied into the content-addressed export. It does not assert that a model runs forward, has a canonical input, has verified source metadata, or has complete dataset attribution.
+      </p>
+    </section>
     <section>
       <h2 class="mb-3 text-2xl font-semibold">Schema</h2>
       <div class="panel overflow-x-auto">
@@ -42,18 +53,13 @@ const fields = [
       <div class="panel p-4">
         <h2 class="mb-3 text-xl font-semibold">Load in 3 lines</h2>
         <pre class="overflow-x-auto text-sm"><code>import pandas as pd
-models = pd.read_json("fixture/export/v1/models.jsonl", lines=True)
-print(models[["slug", "domain", "input_tier"]].head())</code></pre>
+models = pd.read_json("export/models.jsonl", lines=True)
+print(models[["slug", "category", "n_ops"]].head())</code></pre>
       </div>
       <div class="panel p-4">
-        <h2 class="mb-3 text-xl font-semibold">DuckDB-Wasm console</h2>
-        <p style="color: var(--secondary);">Coming soon. The scaffold keeps this as a labeled placeholder.</p>
+        <h2 class="mb-3 text-xl font-semibold">Content-addressed assets</h2>
+        <p style="color: var(--secondary);">Every generated SVG and WebP path is keyed as assets/&lt;sha256&gt;.&lt;ext&gt;; the URL, digest, and byte count are stored together in each AssetRef.</p>
       </div>
-    </section>
-    <section class="panel p-4">
-      <h2 class="mb-2 text-xl font-semibold">Citation and license</h2>
-      <p class="mono text-sm">TorchLens Model Menagerie synthetic scaffold, export v{manifest.export_version}, schema {manifest.schema_version}.</p>
-      <p class="mt-2 text-sm" style="color: var(--secondary);">Fixture metadata is synthetic and intended for scaffold validation. Dataset page copy assumes CC BY 4.0 for the eventual public export.</p>
     </section>
   </section>
 </BaseLayout>

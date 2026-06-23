@@ -12,7 +12,7 @@ interface Props {
 
 const {
   title,
-  description = "Synthetic TorchLens Model Menagerie scaffold for architecture diagrams, metadata, and dataset downloads.",
+  description = "Preview TorchLens Model Menagerie gallery for rendered architecture diagrams, metadata, and dataset downloads.",
   ogImage = "/og-default.svg",
 } = Astro.props;
 const pageTitle = title === "TorchLens Model Menagerie" ? title : `${title} | TorchLens Model Menagerie`;
@@ -31,6 +31,9 @@ const pageTitle = title === "TorchLens Model Menagerie" ? title : `${title} | To
     <title>{pageTitle}</title>
   </head>
   <body>
+    <div class="border-b px-4 py-2 text-center text-sm" style="border-color: var(--border); background: color-mix(in srgb, var(--accent) 14%, var(--bg));">
+      Preview - rendered architecture diagrams; full validated atlas + dataset coming.
+    </div>
     <header class="border-b" style="border-color: var(--border); background: color-mix(in srgb, var(--bg) 88%, transparent);">
       <nav class="shell flex min-h-16 items-center justify-between gap-4">
         <a href="/" class="mono text-sm font-semibold tracking-normal" aria-label="TorchLens Model Menagerie home">TorchLens Menagerie</a>
@@ -47,8 +50,8 @@ const pageTitle = title === "TorchLens Model Menagerie" ? title : `${title} | To
     </main>
     <footer class="shell py-10 text-sm" style="color: var(--secondary);">
       <div class="flex flex-wrap items-center justify-between gap-3 border-t pt-6" style="border-color: var(--border);">
-        <span>Synthetic scaffold. No real menagerie data.</span>
-        <span class="mono">fixture/export/v1</span>
+        <span>Preview catalog. Rendered diagrams only; validation and provenance pending.</span>
+        <span class="mono">export/</span>
       </div>
     </footer>
     <script>

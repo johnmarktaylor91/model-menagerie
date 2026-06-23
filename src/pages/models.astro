@@ -7,12 +7,12 @@ const catalog = getCatalogIndex();
 const pageSize = 60;
 ---
 
-<BaseLayout title="Models" description="Search and filter the synthetic TorchLens Model Menagerie fixture.">
+<BaseLayout title="Models" description="Search and filter the rendered TorchLens Model Menagerie preview.">
   <section class="shell py-10">
     <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
         <h1 class="text-4xl font-semibold">Model gallery</h1>
-        <p class="mt-2" style="color: var(--secondary);">{catalog.models.length} synthetic records from fixture/export/v1.</p>
+        <p class="mt-2" style="color: var(--secondary);">{catalog.models.length} rendered preview records from the generated catalog export.</p>
       </div>
       <div class="panel min-w-72 p-2">
         <label class="sr-only" for="search">Search models</label>
@@ -23,9 +23,15 @@ const pageSize = 60;
     <div class="grid gap-6 lg:grid-cols-[260px_1fr]">
       <aside class="panel h-max space-y-5 p-4">
         <div>
-          <h2 class="mb-2 text-sm font-semibold">Domain</h2>
-          {catalog.facets.domains.map((facet) => (
-            <label class="flex items-center gap-2 py-1 text-sm"><input type="checkbox" data-filter="domain" value={facet.value} /> {facet.value} <span style="color: var(--secondary);">({facet.count})</span></label>
+          <h2 class="mb-2 text-sm font-semibold">Category</h2>
+          {catalog.facets.categories.map((facet) => (
+            <label class="flex items-center gap-2 py-1 text-sm"><input type="checkbox" data-filter="category" value={facet.value} /> {facet.value} <span style="color: var(--secondary);">({facet.count})</span></label>
+          ))}
+        </div>
+        <div>
+          <h2 class="mb-2 text-sm font-semibold">Size</h2>
+          {catalog.facets.sizes.map((facet) => (
+            <label class="flex items-center gap-2 py-1 text-sm"><input type="checkbox" data-filter="size" value={facet.value} /> {facet.value} <span style="color: var(--secondary);">({facet.count})</span></label>
           ))}
         </div>
         <div>
@@ -33,11 +39,6 @@ const pageSize = 60;
           {catalog.facets.tiers.map((facet) => (
             <label class="flex items-center gap-2 py-1 text-sm"><input type="checkbox" data-filter="tier" value={facet.value} /> {facet.value} <span style="color: var(--secondary);">({facet.count})</span></label>
           ))}
-        </div>
-        <div>
-          <h2 class="mb-2 text-sm font-semibold">Verified</h2>
-          <label class="flex items-center gap-2 py-1 text-sm"><input type="checkbox" data-filter="verified" value="true" /> forward validated</label>
-          <label class="flex items-center gap-2 py-1 text-sm"><input type="checkbox" data-filter="verified" value="false" /> not validated</label>
         </div>
         <div>
           <label class="mb-2 block text-sm font-semibold" for="family-filter">Family</label>
@@ -88,7 +89,7 @@ const pageSize = 60;
 
     function writeState() {
       const params = new URLSearchParams();
-      for (const name of ["domain", "tier", "verified"]) {
+      for (const name of ["category", "size", "tier"]) {
         for (const value of getChecked(name)) params.append(name, value);
       }
       if (search.value) params.set("q", search.value);
@@ -124,16 +125,16 @@ const pageSize = 60;
     }
 
     function applyFilters() {
-      const domains = getChecked("domain");
+      const categories = getChecked("category");
+      const sizes = getChecked("size");
       const tiers = getChecked("tier");
-      const verified = getChecked("verified");
       const q = search.value.trim().toLowerCase();
       const familyValue = family.value.trim().toLowerCase();
       const zooValue = zoo.value.trim().toLowerCase();
       const filtered = cards.filter((card) => {
-        if (domains.length && !domains.includes(card.dataset.domain)) return false;
+        if (categories.length && !categories.includes(card.dataset.category)) return false;
+        if (sizes.length && !sizes.includes(card.dataset.size)) return false;
         if (tiers.length && !tiers.includes(card.dataset.tier)) return false;
-        if (verified.length && !verified.includes(card.dataset.verified)) return false;
         if (familyValue && !card.dataset.family.toLowerCase().includes(familyValue)) return false;
         if (zooValue && !card.dataset.zoo.toLowerCase().includes(zooValue)) return false;
         return !q || text(card).includes(q);

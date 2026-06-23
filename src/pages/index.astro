@@ -3,31 +3,32 @@ import CopyCode from "@/components/CopyCode.astro";
 import FunnelStrip from "@/components/FunnelStrip.astro";
 import ModelCard from "@/components/ModelCard.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { getAllModels, getFeaturedModels, getFunnel } from "@/lib/catalog";
+import { getAllModels, getDefaultVariant, getFeaturedModels, getFunnel } from "@/lib/catalog";
 
 const funnel = getFunnel();
 const featured = getFeaturedModels(6);
-const domains = [...new Set(getAllModels().map((model) => model.domain))].sort();
+const categories = [...new Set(getAllModels().map((model) => model.category))].sort();
+const heroVariant = featured[0] ? getDefaultVariant(featured[0]) : null;
 ---
 
-<BaseLayout title="TorchLens Model Menagerie" ogImage={featured[0]?.assets.thumb.url}>
+<BaseLayout title="TorchLens Model Menagerie" ogImage={heroVariant?.thumb.url}>
   <section class="shell grid gap-8 py-14 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
     <div class="space-y-6">
-      <p class="mono text-sm" style="color: var(--accent);">Synthetic fixture scaffold</p>
+      <p class="mono text-sm" style="color: var(--accent);">Rendered preview gallery</p>
       <h1 class="max-w-3xl text-5xl font-semibold leading-tight md:text-6xl">TorchLens Model Menagerie</h1>
       <p class="max-w-2xl text-lg leading-8" style="color: var(--secondary);">
-        A static observatory for neural-net architecture diagrams, rich metadata, and downloadable exports. This local build uses generated synthetic data only.
+        A static observatory for real rendered neural-net architecture diagrams. This preview indexes render coverage while validation metadata and the full atlas are still pending.
       </p>
       <CopyCode code="tl.trace(model, x); log.draw()" />
       <div class="flex flex-wrap gap-3">
         <a class="button primary" href="/models">Explore models</a>
-        <a class="button" href="/dataset">Download fixture</a>
+        <a class="button" href="/dataset">Download catalog</a>
         <a class="button" href="https://github.com/johnmarktaylor91/torchlens" rel="noreferrer">GitHub</a>
         <a class="button" href="https://pypi.org/project/torchlens/" rel="noreferrer">PyPI</a>
       </div>
     </div>
     <div class="diagram-bg panel overflow-hidden p-3">
-      <img src={featured[0]?.assets.thumb.url} alt="Featured synthetic architecture diagram" class="aspect-video w-full rounded object-cover" />
+      {heroVariant ? <img src={heroVariant.thumb.url} alt="Featured architecture diagram" class="aspect-video w-full rounded object-cover" /> : null}
     </div>
   </section>
 
@@ -39,9 +40,9 @@ const domains = [...new Set(getAllModels().map((model) => model.domain))].sort()
   </section>
 
   <section class="shell space-y-4 pb-12">
-    <h2 class="text-2xl font-semibold">Browse by domain</h2>
+    <h2 class="text-2xl font-semibold">Browse by category</h2>
     <div class="flex flex-wrap gap-2">
-      {domains.map((domain) => <a class="chip" href={`/models?domain=${encodeURIComponent(domain)}`}>{domain}</a>)}
+      {categories.map((category) => <a class="chip" href={`/models?category=${encodeURIComponent(category)}`}>{category}</a>)}
     </div>
   </section>
 
@@ -54,7 +55,7 @@ const domains = [...new Set(getAllModels().map((model) => model.domain))].sort()
     <div class="panel flex flex-wrap items-center justify-between gap-4 p-5">
       <div>
         <h2 class="text-xl font-semibold">Trace your own model</h2>
-        <p class="mt-1 text-sm" style="color: var(--secondary);">The real export will replace this fixture at the same data seam.</p>
+        <p class="mt-1 text-sm" style="color: var(--secondary);">Tier-B will fill richer values into the same catalog schema and asset layout.</p>
       </div>
       <a class="button primary" href="/about">Read methodology</a>
     </div>
