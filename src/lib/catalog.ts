@@ -1,8 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const root = process.cwd();
-const exportRoot = path.join(root, "fixture", "export", "v1");
+const exportRoot = process.env.TORCHLENS_EXPORT_ROOT ?? path.join(process.cwd(), "export");
 
 export interface AssetRef {
   url: string;
@@ -10,26 +9,28 @@ export interface AssetRef {
   bytes: number;
 }
 
-export interface ModelAssets {
+export interface ModelVariant {
+  key: string;
+  vis_mode: "unrolled" | "rolled";
+  collapse: "none" | "auto" | "max";
+  label: string;
   svg: AssetRef;
   thumb: AssetRef;
   pdf: AssetRef | null;
-  tlspec: AssetRef;
+  monster: boolean;
 }
 
 export interface ModelRecord {
   stable_id: string;
   slug: string;
   display_name: string;
+  category: string;
   family_normalized: string;
   domain: string;
   zoo: string;
-  era_raw: string;
-  year: number | null;
-  year_confidence: string;
   source_zoo: string;
   source_license: string;
-  source_url: string;
+  source_url: string | null;
   paper_url: string | null;
   render_status: "rendered";
   forward_validated: boolean;
@@ -39,13 +40,13 @@ export interface ModelRecord {
   graph_shape_hash: string;
   param_count: number | null;
   is_recurrent: boolean | null;
-  input_shape_label: string;
-  input_dtype_label: string;
+  default_variant: string;
+  variants: ModelVariant[];
+  tlspec: AssetRef | null;
   recipe_text: string;
   torchlens_version: string;
   renderer_version: string;
   monster_graph: boolean;
-  assets: ModelAssets;
 }
 
 export interface Funnel {
@@ -75,6 +76,8 @@ export interface CatalogFacet {
 export interface CatalogIndex {
   models: ModelRecord[];
   facets: {
+    categories: CatalogFacet[];
+    sizes: CatalogFacet[];
     domains: CatalogFacet[];
     families: CatalogFacet[];
     zoos: CatalogFacet[];
@@ -82,20 +85,22 @@ export interface CatalogIndex {
   };
 }
 
-/** Return the canonical fixture export root. */
+/** Return the canonical generated export root. */
 export function getExportRoot(): string {
   return exportRoot;
 }
 
-/** Read a JSON file from the fixture export. */
+/** Read a JSON file from the generated export. */
 function readJson<T>(relativePath: string): T {
   return JSON.parse(fs.readFileSync(path.join(exportRoot, relativePath), "utf-8")) as T;
 }
 
-/** Ensure fixture data exists before a page attempts to build. */
+/** Ensure generated catalog data exists before a page attempts to build. */
 export function assertFixtureReady(): void {
   if (!fs.existsSync(path.join(exportRoot, "models.jsonl"))) {
-    throw new Error("Fixture export missing. Run `python scripts/gen_fixture.py` first.");
+    throw new Error(
+      "Catalog export missing. Run `python scripts/build_catalog.py --gallery /home/jtaylor/menagerie_gallery --manifest /home/jtaylor/menagerie_gallery/manifest.tsv --out ./export --limit 600` first.",
+    );
   }
 }
 
@@ -135,17 +140,12 @@ export function getManifest(): Manifest {
   return readJson<Manifest>("export_manifest.json");
 }
 
-/** Build facet counts for the client-side gallery controls. */
+/** Load the precomputed catalog index and attach the model list. */
 export function getCatalogIndex(): CatalogIndex {
-  const models = getAllModels();
+  assertFixtureReady();
   return {
-    models,
-    facets: {
-      domains: countFacet(models.map((model) => model.domain)),
-      families: countFacet(models.map((model) => model.family_normalized)),
-      zoos: countFacet(models.map((model) => model.zoo)),
-      tiers: countFacet(models.map((model) => model.input_tier)),
-    },
+    models: getAllModels(),
+    facets: readJson<CatalogIndex["facets"]>("facets.json"),
   };
 }
 
@@ -157,10 +157,20 @@ export function getFeaturedModels(count = 8): ModelRecord[] {
     .slice(0, count);
 }
 
+/** Return the default variant for a model. */
+export function getDefaultVariant(model: ModelRecord): ModelVariant {
+  return model.variants.find((variant) => variant.key === model.default_variant) ?? model.variants[0];
+}
+
+/** Return one variant by key, falling back to the default variant. */
+export function getVariantByKey(model: ModelRecord, key: string | null | undefined): ModelVariant {
+  return model.variants.find((variant) => variant.key === key) ?? getDefaultVariant(model);
+}
+
 /** Read SVG text for safe inline rendering on model pages. */
-export function readSvgAsset(model: ModelRecord): string {
-  const relativePath = model.assets.svg.url.replace(/^\//, "");
-  return fs.readFileSync(path.join(root, relativePath), "utf-8");
+export function readSvgAsset(variant: ModelVariant): string {
+  const relativePath = variant.svg.url.replace(/^\/export\//, "");
+  return fs.readFileSync(path.join(exportRoot, relativePath), "utf-8");
 }
 
 /** Return previous and next models using slug order only. */
@@ -173,21 +183,27 @@ export function getAdjacentModels(slug: string): { prev: ModelRecord | null; nex
   };
 }
 
+/** Return a gallery size bucket from operation count. */
+export function getSizeBucket(value: number | null): string {
+  if (value === null) {
+    return "unknown";
+  }
+  if (value < 50) {
+    return "small";
+  }
+  if (value < 250) {
+    return "medium";
+  }
+  if (value < 1000) {
+    return "large";
+  }
+  return "monster";
+}
+
 /** Format large integers compactly for UI metadata. */
 export function formatCount(value: number | null): string {
   if (value === null) {
     return "unknown";
   }
   return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(value);
-}
-
-/** Count and sort facet values. */
-function countFacet(values: string[]): CatalogFacet[] {
-  const counts = new Map<string, number>();
-  for (const value of values) {
-    counts.set(value, (counts.get(value) ?? 0) + 1);
-  }
-  return [...counts.entries()]
-    .map(([value, count]) => ({ value, count }))
-    .sort((left, right) => right.count - left.count || left.value.localeCompare(right.value));
 }

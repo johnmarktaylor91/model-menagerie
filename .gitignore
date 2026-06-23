@@ -3,6 +3,8 @@ dist/
 .astro/
 .ruff_cache/
 fixture/export/
+export/
 public/fixture/
+public/export/
 .DS_Store
 npm-debug.log*
