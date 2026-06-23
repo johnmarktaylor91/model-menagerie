@@ -1,7 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const exportRoot = process.env.TORCHLENS_EXPORT_ROOT ?? path.join(process.cwd(), "export");
+const siteDataRoot = path.join(process.cwd(), "site-data");
+const modelsJsonlPath = path.join(siteDataRoot, "models.jsonl");
+const publicR2Base = (import.meta.env.PUBLIC_R2_BASE as string | undefined)?.replace(/\/+$/, "") ?? "";
+
+let catalogModels: ModelRecord[] | null = null;
+let catalogBySlug: Map<string, ModelRecord> | null = null;
 
 export interface AssetRef {
   url: string;
@@ -85,47 +90,107 @@ export interface CatalogIndex {
   };
 }
 
-/** Return the canonical generated export root. */
+/** Return the canonical committed site data root. */
 export function getExportRoot(): string {
-  return exportRoot;
+  return siteDataRoot;
 }
 
-/** Read a JSON file from the generated export. */
+/** Read a JSON file from committed site data. */
 function readJson<T>(relativePath: string): T {
-  return JSON.parse(fs.readFileSync(path.join(exportRoot, relativePath), "utf-8")) as T;
+  return JSON.parse(fs.readFileSync(path.join(siteDataRoot, relativePath), "utf-8")) as T;
 }
 
-/** Ensure generated catalog data exists before a page attempts to build. */
+/** Ensure committed catalog data exists before a page attempts to build. */
 export function assertFixtureReady(): void {
-  if (!fs.existsSync(path.join(exportRoot, "models.jsonl"))) {
+  if (!fs.existsSync(modelsJsonlPath)) {
     throw new Error(
-      "Catalog export missing. Run `python scripts/build_catalog.py --gallery /home/jtaylor/menagerie_gallery --manifest /home/jtaylor/menagerie_gallery/manifest.tsv --out ./export --limit 600` first.",
+      "Committed site data missing. Run `python scripts/sync_site_data.py --export-dir <generated-catalog-dir> --site-data ./site-data` after building the catalog data.",
     );
   }
 }
 
-/** Return all model slugs without loading every model body. */
-export function listModelSlugs(): string[] {
+/** Return the asset basename used as the R2 object key. */
+function assetKey(ref: AssetRef): string {
+  const key = ref.url.split("/").filter(Boolean).pop();
+  if (!key) {
+    throw new Error(`Asset reference has no key: ${ref.url}`);
+  }
+  return key;
+}
+
+/** Return a build-time public URL for a content-addressed asset. */
+function publicAssetUrl(ref: AssetRef): string {
+  const key = assetKey(ref);
+  return publicR2Base ? `${publicR2Base}/${key}` : `/assets/${key}`;
+}
+
+/** Return an asset reference with its URL rewritten for public delivery. */
+function withPublicAssetUrl(ref: AssetRef): AssetRef {
+  return {
+    ...ref,
+    url: publicAssetUrl(ref),
+  };
+}
+
+/** Return a model variant with public asset URLs. */
+function withPublicVariantAssetUrls(variant: ModelVariant): ModelVariant {
+  return {
+    ...variant,
+    svg: withPublicAssetUrl(variant.svg),
+    thumb: withPublicAssetUrl(variant.thumb),
+    pdf: variant.pdf ? withPublicAssetUrl(variant.pdf) : null,
+  };
+}
+
+/** Return a model record with public asset URLs. */
+function withPublicModelAssetUrls(model: ModelRecord): ModelRecord {
+  return {
+    ...model,
+    variants: model.variants.map(withPublicVariantAssetUrls),
+    tlspec: model.tlspec ? withPublicAssetUrl(model.tlspec) : null,
+  };
+}
+
+/** Load all model records from committed JSON Lines data once. */
+function loadCatalogModels(): ModelRecord[] {
   assertFixtureReady();
-  const modelDir = path.join(exportRoot, "models");
-  return fs
-    .readdirSync(modelDir)
-    .filter((name) => name.endsWith(".json"))
-    .map((name) => name.slice(0, -5))
+  if (catalogModels === null) {
+    catalogModels = fs
+      .readFileSync(modelsJsonlPath, "utf-8")
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => withPublicModelAssetUrls(JSON.parse(line) as ModelRecord));
+  }
+  return catalogModels;
+}
+
+/** Return the slug lookup map for committed JSON Lines data. */
+function loadCatalogBySlug(): Map<string, ModelRecord> {
+  if (catalogBySlug === null) {
+    catalogBySlug = new Map(loadCatalogModels().map((model) => [model.slug, model]));
+  }
+  return catalogBySlug;
+}
+
+/** Return all model slugs from the in-memory JSON Lines index. */
+export function listModelSlugs(): string[] {
+  return loadCatalogModels()
+    .map((model) => model.slug)
     .sort();
 }
 
-/** Load one model by slug from its per-model JSON document. */
+/** Load one model by slug from the in-memory JSON Lines index. */
 export function getModelBySlug(slug: string): ModelRecord {
-  assertFixtureReady();
-  return readJson<ModelRecord>(path.join("models", `${slug}.json`));
+  const model = loadCatalogBySlug().get(slug);
+  if (!model) {
+    throw new Error(`Model not found: ${slug}`);
+  }
+  return model;
 }
 
 /** Load the complete catalog for aggregate pages and search bootstrap data. */
 export function getAllModels(): ModelRecord[] {
-  assertFixtureReady();
-  const lines = fs.readFileSync(path.join(exportRoot, "models.jsonl"), "utf-8").trim().split("\n");
-  return lines.filter(Boolean).map((line) => JSON.parse(line) as ModelRecord);
+  return loadCatalogModels();
 }
 
 /** Load funnel counts. */
@@ -165,12 +230,6 @@ export function getDefaultVariant(model: ModelRecord): ModelVariant {
 /** Return one variant by key, falling back to the default variant. */
 export function getVariantByKey(model: ModelRecord, key: string | null | undefined): ModelVariant {
   return model.variants.find((variant) => variant.key === key) ?? getDefaultVariant(model);
-}
-
-/** Read SVG text for safe inline rendering on model pages. */
-export function readSvgAsset(variant: ModelVariant): string {
-  const relativePath = variant.svg.url.replace(/^\/export\//, "");
-  return fs.readFileSync(path.join(exportRoot, relativePath), "utf-8");
 }
 
 /** Return previous and next models using slug order only. */

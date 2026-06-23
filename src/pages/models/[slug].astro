@@ -1,6 +1,6 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { formatCount, getAdjacentModels, getDefaultVariant, getModelBySlug, getVariantByKey, listModelSlugs, readSvgAsset } from "@/lib/catalog";
+import { formatCount, getAdjacentModels, getDefaultVariant, getModelBySlug, getVariantByKey, listModelSlugs } from "@/lib/catalog";
 
 export function getStaticPaths() {
   return listModelSlugs().map((slug) => ({ params: { slug } }));
@@ -10,7 +10,6 @@ const model = getModelBySlug(Astro.params.slug ?? "");
 const requestedVariantKey = Astro.url.searchParams.get("v");
 const selectedVariant = getVariantByKey(model, requestedVariantKey);
 const defaultVariant = getDefaultVariant(model);
-const svgMarkup = selectedVariant.monster ? "" : readSvgAsset(selectedVariant);
 const { prev, next } = getAdjacentModels(model.slug);
 const meta = [
   ["Ops", model.n_ops ?? "unknown"],
@@ -74,7 +73,9 @@ const meta = [
           </div>
         ) : (
           <div id="diagram-stage" class="diagram-bg h-[70vh] min-h-[520px] overflow-hidden p-4" tabindex="0" aria-label={`${model.display_name} pan and zoom diagram`}>
-            <div id="diagram-panzoom" class="inline-block origin-top-left" set:html={svgMarkup} />
+            <div id="diagram-panzoom" class="inline-block origin-top-left">
+              <img src={selectedVariant.svg.url} alt={`${model.display_name} architecture diagram`} class="max-w-none select-none" draggable="false" />
+            </div>
           </div>
         )}
       </section>
@@ -97,7 +98,6 @@ const meta = [
             <a class="button primary" href={selectedVariant.svg.url}>SVG</a>
             {selectedVariant.pdf ? <a class="button" href={selectedVariant.pdf.url}>PDF</a> : <span class="button" aria-disabled="true">PDF pending</span>}
             {model.tlspec ? <a class="button" href={model.tlspec.url}>tlspec</a> : <span class="button" aria-disabled="true">tlspec pending</span>}
-            <a class="button" href={`/export/models/${model.slug}.json`}>Metadata JSON</a>
           </div>
           <p style="color: var(--secondary);">
             Source zoo and license are placeholders until validation metadata lands: {model.source_zoo}, {model.source_license}.

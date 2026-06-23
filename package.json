@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "python scripts/sync_fixture_public.py && astro dev",
-    "build": "python scripts/sync_fixture_public.py && astro build && pagefind --site dist",
+    "dev": "astro dev",
+    "build": "astro build && pagefind --site dist",
     "preview": "astro preview",
     "check": "astro check",
     "lint": "ruff check . --fix"
