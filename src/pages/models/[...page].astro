@@ -1,0 +1,311 @@
+---
+import type { Page } from "astro";
+import ModelCard from "@/components/ModelCard.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { getCatalogIndex, type ModelRecord } from "@/lib/catalog";
+
+interface Props {
+  page: Page<ModelRecord>;
+}
+
+const catalog = getCatalogIndex();
+const pageSize = 48;
+const page = Astro.props.page;
+const currentPage = page.currentPage;
+const lastPage = page.lastPage;
+const firstPageUrl = page.url.first ?? "/models/";
+const lastPageUrl = page.url.last ?? `/models/${lastPage}/`;
+
+export function getStaticPaths({ paginate }: { paginate: (items: ModelRecord[], options: { pageSize: number }) => unknown }) {
+  return paginate(getCatalogIndex().models, { pageSize: 48 });
+}
+
+function pageUrl(pageNumber: number): string {
+  return pageNumber === 1 ? firstPageUrl : `/models/${pageNumber}/`;
+}
+
+function visiblePageNumbers(): number[] {
+  const pages = new Set([1, lastPage]);
+  for (let pageNumber = currentPage - 2; pageNumber <= currentPage + 2; pageNumber += 1) {
+    if (pageNumber >= 1 && pageNumber <= lastPage) {
+      pages.add(pageNumber);
+    }
+  }
+  return [...pages].sort((left, right) => left - right);
+}
+
+const serverPageNumbers = visiblePageNumbers();
+---
+
+<BaseLayout title="Models" description="Search and filter the rendered TorchLens Model Menagerie preview.">
+  <section class="shell py-10">
+    <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="text-4xl font-semibold">Model gallery</h1>
+        <p class="mt-2" style="color: var(--secondary);">{catalog.models.length} rendered preview records from the generated catalog export.</p>
+      </div>
+      <div class="panel min-w-72 p-2">
+        <label class="sr-only" for="search">Search models</label>
+        <input id="search" class="w-full bg-transparent p-2 outline-none" type="search" placeholder="Search models" />
+      </div>
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-[260px_1fr]">
+      <aside class="panel h-max space-y-5 p-4">
+        <div>
+          <h2 class="mb-2 text-sm font-semibold">Category</h2>
+          {catalog.facets.categories.map((facet) => (
+            <label class="flex items-center gap-2 py-1 text-sm"><input type="checkbox" data-filter="category" value={facet.value} /> {facet.value} <span style="color: var(--secondary);">({facet.count})</span></label>
+          ))}
+        </div>
+        <div>
+          <h2 class="mb-2 text-sm font-semibold">Size</h2>
+          {catalog.facets.sizes.map((facet) => (
+            <label class="flex items-center gap-2 py-1 text-sm"><input type="checkbox" data-filter="size" value={facet.value} /> {facet.value} <span style="color: var(--secondary);">({facet.count})</span></label>
+          ))}
+        </div>
+        <div>
+          <h2 class="mb-2 text-sm font-semibold">Input tier</h2>
+          {catalog.facets.tiers.map((facet) => (
+            <label class="flex items-center gap-2 py-1 text-sm"><input type="checkbox" data-filter="tier" value={facet.value} /> {facet.value} <span style="color: var(--secondary);">({facet.count})</span></label>
+          ))}
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-semibold" for="family-filter">Family</label>
+          <input id="family-filter" class="w-full rounded border bg-transparent p-2 text-sm" style="border-color: var(--border);" placeholder="Type family" />
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-semibold" for="zoo-filter">Zoo</label>
+          <input id="zoo-filter" class="w-full rounded border bg-transparent p-2 text-sm" style="border-color: var(--border);" placeholder="Type zoo" />
+        </div>
+        <button id="clear-filters" class="button w-full" type="button">Clear filters</button>
+      </aside>
+
+      <div>
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <p id="result-count" class="text-sm" style="color: var(--secondary);">
+            Showing {page.start + 1}-{page.end} of {catalog.models.length} models
+          </p>
+          <nav id="pagination-top" class="flex flex-wrap gap-2" aria-label="Gallery pagination">
+            <a class="button" href={firstPageUrl} aria-disabled={currentPage === 1 ? "true" : "false"}>First</a>
+            <a class="button" href={page.url.prev ?? "#"} aria-disabled={page.url.prev ? "false" : "true"}>Previous</a>
+            {serverPageNumbers.map((pageNumber) => (
+              <a class:list={["button", pageNumber === currentPage && "primary"]} href={pageUrl(pageNumber)} aria-current={pageNumber === currentPage ? "page" : "false"}>{pageNumber}</a>
+            ))}
+            <a class="button" href={page.url.next ?? "#"} aria-disabled={page.url.next ? "false" : "true"}>Next</a>
+            <a class="button" href={lastPageUrl} aria-disabled={currentPage === lastPage ? "true" : "false"}>Last</a>
+          </nav>
+        </div>
+        <div id="skeletons" class="hidden grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+          {Array.from({ length: 6 }).map(() => <div class="panel h-72 animate-pulse" />)}
+        </div>
+        <div id="grid" class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+          {page.data.map((model: ModelRecord) => <ModelCard model={model} />)}
+        </div>
+        <div id="empty-state" class="panel hidden p-8 text-center">
+          <h2 class="text-xl font-semibold">No matching models</h2>
+          <p class="mt-2" style="color: var(--secondary);">Adjust filters or clear the search query.</p>
+        </div>
+        <nav id="pagination-bottom" class="mt-6 flex flex-wrap gap-2" aria-label="Gallery pagination">
+          <a class="button" href={firstPageUrl} aria-disabled={currentPage === 1 ? "true" : "false"}>First</a>
+          <a class="button" href={page.url.prev ?? "#"} aria-disabled={page.url.prev ? "false" : "true"}>Previous</a>
+          {serverPageNumbers.map((pageNumber) => (
+            <a class:list={["button", pageNumber === currentPage && "primary"]} href={pageUrl(pageNumber)} aria-current={pageNumber === currentPage ? "page" : "false"}>{pageNumber}</a>
+          ))}
+          <a class="button" href={page.url.next ?? "#"} aria-disabled={page.url.next ? "false" : "true"}>Next</a>
+          <a class="button" href={lastPageUrl} aria-disabled={currentPage === lastPage ? "true" : "false"}>Last</a>
+        </nav>
+      </div>
+    </div>
+  </section>
+
+  <script is:inline define:vars={{ pageSize, r2Base: import.meta.env.PUBLIC_R2_BASE ?? "" }}>
+    const grid = document.getElementById("grid");
+    const search = document.getElementById("search");
+    const family = document.getElementById("family-filter");
+    const zoo = document.getElementById("zoo-filter");
+    const resultCount = document.getElementById("result-count");
+    const empty = document.getElementById("empty-state");
+    const skeletons = document.getElementById("skeletons");
+    const pagers = [document.getElementById("pagination-top"), document.getElementById("pagination-bottom")];
+    const assetBase = r2Base.replace(/\/+$/, "");
+    let indexPromise = null;
+    let clientResults = [];
+    let currentPage = 1;
+
+    const getChecked = (name) => [...document.querySelectorAll(`[data-filter="${name}"]:checked`)].map((input) => input.value);
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[character]);
+    }
+
+    function isFilterActive() {
+      return Boolean(
+        search.value.trim() ||
+          family.value.trim() ||
+          zoo.value.trim() ||
+          getChecked("category").length ||
+          getChecked("size").length ||
+          getChecked("tier").length,
+      );
+    }
+
+    function modelText(model) {
+      return `${model[1]} ${model[2]} ${model[3]} ${model[4]} ${model[5]} ${model[6]} ${model[8] ?? ""}`.toLowerCase();
+    }
+
+    function assetUrl(key) {
+      return assetBase ? `${assetBase}/${key}` : `/assets/${key}`;
+    }
+
+    function renderCard(model) {
+      const [slug, name, category, size, tier, familyName, zooName, thumb, nOps] = model;
+      const verified = tier === "real" ? "verified real" : tier === "wrapper" ? "verified wrapper" : "not forward validated";
+      return `<article class="card overflow-hidden" data-model-card data-category="${escapeHtml(category)}" data-size="${escapeHtml(size)}" data-tier="${escapeHtml(tier)}" data-family="${escapeHtml(familyName)}" data-zoo="${escapeHtml(zooName)}">
+  <a href="/models/${encodeURIComponent(slug)}/" class="block">
+    <img src="${escapeHtml(assetUrl(thumb))}" alt="${escapeHtml(name)} architecture thumbnail" loading="lazy" width="480" height="270" class="aspect-video w-full object-cover" />
+    <div class="space-y-3 p-4">
+      <div class="flex items-start justify-between gap-3">
+        <h2 class="text-base font-semibold leading-tight">${escapeHtml(name)}</h2>
+        <span class="chip mono shrink-0">${escapeHtml(size)}</span>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <span class="chip">${escapeHtml(familyName)}</span>
+        <span class="chip">${escapeHtml(category)}</span>
+        <span class="chip">${verified}</span>
+      </div>
+      <div class="flex items-center justify-between text-sm" style="color: var(--secondary);">
+        <span>${escapeHtml(zooName)}</span>
+        <span class="mono">${escapeHtml(nOps ?? "?")} ops</span>
+      </div>
+    </div>
+  </a>
+</article>`;
+    }
+
+    async function loadIndex() {
+      if (!indexPromise) {
+        skeletons.classList.remove("hidden");
+        grid.classList.add("hidden");
+        empty.classList.add("hidden");
+        indexPromise = fetch("/models-index.json").then((response) => {
+          if (!response.ok) throw new Error(`Failed to load model index: ${response.status}`);
+          return response.json();
+        });
+      }
+      return indexPromise;
+    }
+
+    function writeState() {
+      const params = new URLSearchParams();
+      for (const name of ["category", "size", "tier"]) {
+        for (const value of getChecked(name)) params.append(name, value);
+      }
+      if (search.value) params.set("q", search.value);
+      if (family.value) params.set("family", family.value);
+      if (zoo.value) params.set("zoo", zoo.value);
+      if (currentPage > 1) params.set("page", String(currentPage));
+      history.replaceState(null, "", `/models/${params.toString() ? `?${params}` : ""}`);
+    }
+
+    function readState() {
+      const params = new URLSearchParams(location.search);
+      search.value = params.get("q") ?? "";
+      family.value = params.get("family") ?? "";
+      zoo.value = params.get("zoo") ?? "";
+      currentPage = Number(params.get("page") ?? "1");
+      for (const input of document.querySelectorAll("[data-filter]")) {
+        input.checked = params.getAll(input.dataset.filter).includes(input.value);
+      }
+    }
+
+    function renderPagination(total) {
+      const pages = Math.max(1, Math.ceil(total / pageSize));
+      currentPage = Math.min(Math.max(currentPage, 1), pages);
+      const pageNumbers = [...new Set([1, pages, currentPage - 2, currentPage - 1, currentPage, currentPage + 1, currentPage + 2])]
+        .filter((page) => page >= 1 && page <= pages)
+        .sort((left, right) => left - right);
+      const numbered = pageNumbers
+        .map((page) => `<button class="button${page === currentPage ? " primary" : ""}" type="button" data-page="${page}" aria-current="${page === currentPage ? "page" : "false"}">${page}</button>`)
+        .join("");
+      const html = `<button class="button" type="button" data-page="1" ${currentPage === 1 ? 'aria-disabled="true"' : ""}>First</button>
+        <button class="button" type="button" data-page="${Math.max(1, currentPage - 1)}" ${currentPage === 1 ? 'aria-disabled="true"' : ""}>Previous</button>
+        ${numbered}
+        <button class="button" type="button" data-page="${Math.min(pages, currentPage + 1)}" ${currentPage === pages ? 'aria-disabled="true"' : ""}>Next</button>
+        <button class="button" type="button" data-page="${pages}" ${currentPage === pages ? 'aria-disabled="true"' : ""}>Last</button>`;
+      for (const nav of pagers) nav.innerHTML = html;
+      document.querySelectorAll("[data-page]").forEach((button) => button.addEventListener("click", () => {
+        if (button.getAttribute("aria-disabled") === "true") return;
+        currentPage = Number(button.dataset.page);
+        renderClientResults();
+      }));
+    }
+
+    function filterModels(models) {
+      const categories = getChecked("category");
+      const sizes = getChecked("size");
+      const tiers = getChecked("tier");
+      const q = search.value.trim().toLowerCase();
+      const familyValue = family.value.trim().toLowerCase();
+      const zooValue = zoo.value.trim().toLowerCase();
+      return models.filter((model) => {
+        if (categories.length && !categories.includes(model[2])) return false;
+        if (sizes.length && !sizes.includes(model[3])) return false;
+        if (tiers.length && !tiers.includes(model[4])) return false;
+        if (familyValue && !model[5].toLowerCase().includes(familyValue)) return false;
+        if (zooValue && !model[6].toLowerCase().includes(zooValue)) return false;
+        return !q || modelText(model).includes(q);
+      });
+    }
+
+    function renderClientResults() {
+      renderPagination(clientResults.length);
+      const start = (currentPage - 1) * pageSize;
+      grid.innerHTML = clientResults.slice(start, start + pageSize).map(renderCard).join("");
+      resultCount.textContent = `${clientResults.length} matching models`;
+      empty.classList.toggle("hidden", clientResults.length !== 0);
+      grid.classList.toggle("hidden", clientResults.length === 0);
+      skeletons.classList.add("hidden");
+      writeState();
+    }
+
+    async function applyFilters() {
+      if (!isFilterActive()) {
+        if (location.pathname !== "/models/" || location.search) {
+          location.href = "/models/";
+        }
+        return;
+      }
+      const models = await loadIndex();
+      clientResults = filterModels(models);
+      renderClientResults();
+    }
+
+    readState();
+    for (const control of document.querySelectorAll("input[data-filter], #search, #family-filter, #zoo-filter")) {
+      control.addEventListener("input", () => {
+        currentPage = 1;
+        applyFilters();
+      });
+      control.addEventListener("change", () => {
+        currentPage = 1;
+        applyFilters();
+      });
+    }
+    document.getElementById("clear-filters").addEventListener("click", () => {
+      for (const input of document.querySelectorAll("input")) {
+        if (input.type === "checkbox") input.checked = false;
+        if (input.type === "search" || input.type === "text") input.value = "";
+      }
+      currentPage = 1;
+      location.href = "/models/";
+    });
+    if (isFilterActive()) applyFilters();
+  </script>
+</BaseLayout>
