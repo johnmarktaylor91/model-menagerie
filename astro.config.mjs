@@ -3,7 +3,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 
 export default defineConfig({
-  site: "https://torchlens.local",
+  site: "https://modelmenagerie.ai",
   output: "static",
   integrations: [sitemap()],
   vite: {

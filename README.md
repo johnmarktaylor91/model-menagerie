@@ -31,8 +31,8 @@ End-to-end deployment flow:
 
 ```bash
 python scripts/build_catalog.py \
-  --gallery /home/jtaylor/menagerie_gallery \
-  --manifest /home/jtaylor/menagerie_gallery/manifest.tsv \
+  --gallery /path/to/menagerie_gallery \
+  --manifest /path/to/menagerie_gallery/manifest.tsv \
   --out ./export \
   --jobs 8
 python scripts/sync_site_data.py --export-dir ./export --site-data ./site-data
@@ -56,7 +56,7 @@ R2 must expose the uploaded object keys through the public URL used by `PUBLIC_R
 For a small local export refresh, keep using `--limit` on `build_catalog.py`, then run `sync_site_data.py`:
 
 ```bash
-python scripts/build_catalog.py --gallery /home/jtaylor/menagerie_gallery --manifest /home/jtaylor/menagerie_gallery/manifest.tsv --out ./export --limit 600
+python scripts/build_catalog.py --gallery /path/to/menagerie_gallery --manifest /path/to/menagerie_gallery/manifest.tsv --out ./export --limit 600
 python scripts/sync_site_data.py --export-dir ./export --site-data ./site-data
 npm run build
 ```
@@ -66,7 +66,7 @@ npm run build
 `scripts/build_catalog.py` is the re-runnable Phase 0 export builder:
 
 ```bash
-python scripts/build_catalog.py --gallery /home/jtaylor/menagerie_gallery --manifest /home/jtaylor/menagerie_gallery/manifest.tsv --out ./export --limit 600
+python scripts/build_catalog.py --gallery /path/to/menagerie_gallery --manifest /path/to/menagerie_gallery/manifest.tsv --out ./export --limit 600
 ```
 
 It reads rendered manifest rows, verifies each SVG exists, copies SVGs into content-addressed assets, generates WebP thumbnails, and emits:
@@ -92,7 +92,7 @@ Do not commit `export/models/*.json` or `export/assets/`.
 Use `--limit 600` for a fast local preview. To scale to the full rendered gallery, omit `--limit` or set a higher value:
 
 ```bash
-python scripts/build_catalog.py --gallery /home/jtaylor/menagerie_gallery --manifest /home/jtaylor/menagerie_gallery/manifest.tsv --out ./export --jobs 8
+python scripts/build_catalog.py --gallery /path/to/menagerie_gallery --manifest /path/to/menagerie_gallery/manifest.tsv --out ./export --jobs 8
 ```
 
 Full-scale thumbnail generation is intentionally a separate operator-triggered step.
@@ -126,4 +126,4 @@ Generated asset references preserve the digest, byte count, and generated path i
 
 ## Scope
 
-This repo is the separate web project. It does not modify the TorchLens package repo or the read-only `/home/jtaylor/menagerie_gallery` source gallery.
+This repo is the separate web project. It does not modify the TorchLens package repo or the read-only rendered source gallery.
