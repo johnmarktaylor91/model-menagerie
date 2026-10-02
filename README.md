@@ -1,6 +1,8 @@
-# TorchLens Model Menagerie Web
+# Model Menagerie website
 
-Astro static site for the public Model Menagerie gallery. The repo commits lightweight catalog data in `site-data/` and serves content-addressed diagram assets from Cloudflare R2.
+Astro static site for Model Menagerie (https://modelmenagerie.ai), the public gallery of neural-network architectures traced with TorchLens. This directory is developed as `site/` inside the Menagerie repo, which also holds the code that finds, runs and renders the models.
+
+The site commits lightweight catalog data in `site-data/` and serves content-addressed diagram assets from Cloudflare R2.
 
 ## Run
 
