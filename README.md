@@ -1,5 +1,7 @@
 # Model Menagerie website
 
+> **Archived 2026-10-02.** The site now lives in `site/` of https://github.com/johnmarktaylor91/menagerie, which builds https://modelmenagerie.ai.
+
 Astro static site for Model Menagerie (https://modelmenagerie.ai), the public gallery of neural-network architectures traced with TorchLens. This directory is developed as `site/` inside the Menagerie repo, which also holds the code that finds, runs and renders the models.
 
 The site commits lightweight catalog data in `site-data/` and serves content-addressed diagram assets from Cloudflare R2.
